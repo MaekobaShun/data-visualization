@@ -1,13 +1,13 @@
 # 📊 データ可視化ダッシュボード（Streamlit）
 
 CSVをアップロードするだけで、データ概要・単変量解析・相関/散布図・外れ値分析をノーコードで行えるStreamlitアプリです。
-
 日本語のフォント表示に対応し、Shift-JIS / CP932 / EUC-JP / UTF-8の自動判定で読み込みます。
 
 ---
 
 ## 今後の予定
-- 時系列分析タブの拡張（現在「開発中」表示）
+- クラスタリング
+- ロジスティック回帰、ランダムフォレストによる重要度可視化
 
 ---
 
@@ -27,13 +27,13 @@ python -m venv .venv && . .venv/bin/activate
 
 ```bash
 pip install -U pip
-pip install streamlit pandas numpy plotly seaborn scipy matplotlib japanize-matplotlib
+pip install streamlit pandas numpy plotly scipy
 ```
 
 ### 3\) 起動
 
 ```bash
-streamlit run app.py   # ← ファイル名に合わせて変更
+streamlit run data_vis.py   # ← ファイル名に合わせて変更
 ```
 
 起動後、左サイドバーからCSVをアップロードするか、\*\*「アイリスデータセットを読み込み」\*\*ボタンでサンプル確認できます。
@@ -79,10 +79,6 @@ streamlit run app.py   # ← ファイル名に合わせて変更
   - **箱ひげ図**：IQRによる外れ値件数と比率を表示
   - **Z-Score**：しきい値可変、外れ値を赤でハイライト
 
-### 5\) 🕰️ 時系列分析
-
-  - 開発中（UI土台のみ）
-
 -----
 
 ## サイドバー機能
@@ -97,9 +93,8 @@ streamlit run app.py   # ← ファイル名に合わせて変更
 ## 技術スタック
 
   - **フロント**：Streamlit
-  - **可視化**：Plotly（express / graph\_objects）、Matplotlib、Seaborn
+  - **可視化**：Plotly（express / graph\_objects）
   - **統計**：NumPy / Pandas / SciPy（`gaussian_kde`, `skew`, `kurtosis`, `f_oneway`）
-  - **日本語表示**：japanize-matplotlib
   - **UX**：Toast通知、カスタムCSS、`@st.cache_data`
 
 -----
@@ -111,10 +106,7 @@ streamlit
 pandas
 numpy
 plotly
-seaborn
 scipy
-matplotlib
-japanize-matplotlib
 ```
 
 *補足：SciPyが未導入の場合、ANOVAはスキップされ情報メッセージを表示します。*
@@ -126,7 +118,6 @@ japanize-matplotlib
   - 読み込み時に1列目がインデックスとして扱われます。実データで不要な場合は列入替・保存時にご注意ください。
   - 文字コード判定が難しいデータでは、一部文字が欠落・置換される可能性があります（ワーニング表示）。
   - 極端に大きいCSVでは、ペアプロットや相関行列の描画に時間がかかる場合があります（サンプリングの活用推奨）。
-  - 時系列タブは開発中です。
 
 -----
 
@@ -136,30 +127,6 @@ japanize-matplotlib
   - **粒度調整**：カテゴリの粒度が細かすぎる場合は、事前にグルーピングやカテゴリ結合を行うと見やすくなります。
   - **相関の解釈**：強相関ペアの抽出機能で多重共線性の手がかりを得られます。特徴量選択の当たりを付けるのに有用です。
 
------
-
-## ☁️ デプロイ（例）
-
-### Streamlit Community Cloud
-
-リポジトリを連携し、`main`ブランチとエントリポイント（例：`app.py`）を指定するだけで公開可能です。
-
-### Docker（任意）
-
-  - ベースイメージ：`python:3.11-slim` など
-  - `requirements.txt` を用意して `streamlit run` を `CMD` に設定
-
------
-
-## リポジトリ構成（例）
-
-```
-repo/
-├─ app.py                 # ← このREADMEのコード本体
-├─ requirements.txt       # 依存関係
-├─ data/                  # （任意）サンプルCSV
-└─ README.md              # 本ドキュメント
-```
 
 -----
 
