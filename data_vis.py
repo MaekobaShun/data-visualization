@@ -529,120 +529,115 @@ def main():
                         )
                         show_trend = False
 
+                # 相関係数
+                corr = df[x_var].corr(df[y_var])
+                valid = df[[x_var, y_var]].dropna()
+                count = len(valid)
+                strength = (
+                    "非常に強い" if abs(corr) >= 0.8 else
+                    "強い"   if abs(corr) >= 0.6 else
+                    "中程度" if abs(corr) >= 0.4 else
+                    "弱い"   if abs(corr) >= 0.2 else
+                    "非常に弱い"
+                )
+                direction = (
+                    "正の相関" if corr > 0.1 else
+                    "負の相関" if corr < -0.1 else
+                    "ほぼ無相関"
+                )
+
+                st.warning(f"""
+                ### 🔗 相関統計
+                - 相関係数: {corr:.3f}
+                - データ数: {count}
+                - 強さ: {strength}
+                - 方向: {direction}
+                """)
+
                 # プロットと統計
-                plot_col, stats_col = st.columns([1, 1])
-                with plot_col:
-                    fig = px.scatter(
-                        df,
-                        x=x_var,
-                        y=y_var,
-                        color=color_var,
-                        trendline="ols" if show_trend and color_var is None else None,
-                        title=f"{x_var} vs {y_var}",
-                        template="plotly_white"
-                    )
-                    st.plotly_chart(fig, use_container_width=True)
+                fig = px.scatter(
+                    df,
+                    x=x_var,
+                    y=y_var,
+                    color=color_var,
+                    trendline="ols" if show_trend and color_var is None else None,
+                    title=f"{x_var} vs {y_var}",
+                    template="plotly_white"
+                )
+                st.plotly_chart(fig, use_container_width=True)
 
-                with stats_col:
-                    # 相関係数
-                    corr = df[x_var].corr(df[y_var])
-                    valid = df[[x_var, y_var]].dropna()
-                    count = len(valid)
-                    strength = (
-                        "非常に強い" if abs(corr) >= 0.8 else
-                        "強い"   if abs(corr) >= 0.6 else
-                        "中程度" if abs(corr) >= 0.4 else
-                        "弱い"   if abs(corr) >= 0.2 else
-                        "非常に弱い"
-                    )
-                    direction = (
-                        "正の相関" if corr > 0.1 else
-                        "負の相関" if corr < -0.1 else
-                        "ほぼ無相関"
-                    )
+                stat_info = f"""
+                ### 📊 変数の基本統計量
+                **{x_var}**
+                - 平均: {df[x_var].mean():.3f}
+                - 標準偏差: {df[x_var].std():.3f}
+                - 最小値: {df[x_var].min():.3f}
+                - 最大値: {df[x_var].max():.3f}
 
-                    st.warning(f"""
-                    ### 🔗 相関統計
-                    - 相関係数: {corr:.3f}
-                    - データ数: {count}
-                    - 強さ: {strength}
-                    - 方向: {direction}
-                    """)
-
-                    stat_info = f"""
-                    ### 📊 変数の基本統計量
-                    **{x_var}**
-                    - 平均: {df[x_var].mean():.3f}
-                    - 標準偏差: {df[x_var].std():.3f}
-                    - 最小値: {df[x_var].min():.3f}
-                    - 最大値: {df[x_var].max():.3f}
-
-                    **{y_var}**
-                    - 平均: {df[y_var].mean():.3f}
-                    - 標準偏差: {df[y_var].std():.3f}
-                    - 最小値: {df[y_var].min():.3f}
-                    - 最大値: {df[y_var].max():.3f}
-                    """
-                    st.info(stat_info)
+                **{y_var}**
+                - 平均: {df[y_var].mean():.3f}
+                - 標準偏差: {df[y_var].std():.3f}
+                - 最小値: {df[y_var].min():.3f}
+                - 最大値: {df[y_var].max():.3f}
+                """
+                st.info(stat_info)
 
             # --- 相関行列タブ ---
             with corr_tabs[1]:
                 corr_mtx = df[numeric_cols].corr()
-                heat_col, list_col = st.columns([1, 1])
 
-                with heat_col:
-                    heat_fig = px.imshow(
-                        corr_mtx,
-                        text_auto=".3f",
-                        aspect="auto",
-                        color_continuous_scale="RdBu_r",
-                        title="数値変数間の相関行列",
-                        template="plotly_white"
+                # 相関行列の統計（info形式で表示）
+                upper = corr_mtx.where(np.triu(np.ones(corr_mtx.shape), k=1).astype(bool))
+                all_vals = upper.stack().dropna()
+                summary_text = f"""
+                ### 📊 相関行列の統計
+                - **変数ペア数**: {len(all_vals)}
+                - **平均相関係数**: {all_vals.mean():.3f}
+                - **最大相関係数**: {all_vals.max():.3f}
+                - **最小相関係数**: {all_vals.min():.3f}
+                """
+                st.warning(summary_text)
+
+                heat_fig = px.imshow(
+                    corr_mtx,
+                    text_auto=".3f",
+                    aspect="auto",
+                    color_continuous_scale="RdBu_r",
+                    title="数値変数間の相関行列",
+                    template="plotly_white"
+                )
+                heat_fig.update_layout(xaxis=dict(tickangle=45), height=500)
+                st.plotly_chart(heat_fig, use_container_width=True)
+
+
+                st.subheader("📋 強い相関の組み合わせ")
+                thresh = st.slider("相関の閾値", 0.1, 0.9, 0.5, 0.1, key="corr_threshold")
+                pairs = []
+                cols = corr_mtx.columns
+                for i in range(len(cols)):
+                    for j in range(i+1, len(cols)):
+                        val = corr_mtx.iloc[i, j]
+                        if abs(val) >= thresh:
+                            pairs.append((cols[i], cols[j], val))
+                if pairs:
+                    df_pairs = pd.DataFrame(
+                        sorted(pairs, key=lambda x: abs(x[2]), reverse=True),
+                        columns=["変数1", "変数2", "相関係数"]
                     )
-                    heat_fig.update_layout(xaxis=dict(tickangle=45), height=500)
-                    st.plotly_chart(heat_fig, use_container_width=True)
+                    st.dataframe(df_pairs,
+                                use_container_width=True,
+                                column_config={"相関係数": st.column_config.NumberColumn("相関係数", format="%.3f")}
+                                )
 
-                with list_col:
-                    # 相関行列の統計（info形式で表示）
-                    upper = corr_mtx.where(np.triu(np.ones(corr_mtx.shape), k=1).astype(bool))
-                    all_vals = upper.stack().dropna()
-                    summary_text = f"""
-                    ### 📊 相関行列の統計
-                    - **変数ペア数**: {len(all_vals)}
-                    - **平均相関係数**: {all_vals.mean():.3f}
-                    - **最大相関係数**: {all_vals.max():.3f}
-                    - **最小相関係数**: {all_vals.min():.3f}
+                    summary_corr_text = f"""
+                    ### 🔗 相関サマリー
+                    - **閾値超えの組み合わせ数**: {len(pairs)}
+                    - **最大相関係数**: {max(pairs, key=lambda x: abs(x[2]))[2]:.3f}
+                    - **平均相関係数**: {np.mean([v for *_, v in pairs]):.3f}
                     """
-                    st.warning(summary_text)
-
-                    st.subheader("📋 強い相関の組み合わせ")
-                    thresh = st.slider("相関の閾値", 0.1, 0.9, 0.3, 0.1, key="corr_threshold")
-                    pairs = []
-                    cols = corr_mtx.columns
-                    for i in range(len(cols)):
-                        for j in range(i+1, len(cols)):
-                            val = corr_mtx.iloc[i, j]
-                            if abs(val) >= thresh:
-                                pairs.append((cols[i], cols[j], val))
-                    if pairs:
-                        df_pairs = pd.DataFrame(
-                            sorted(pairs, key=lambda x: abs(x[2]), reverse=True),
-                            columns=["変数1", "変数2", "相関係数"]
-                        )
-                        st.dataframe(df_pairs,
-                                    use_container_width=True,
-                                    column_config={"相関係数": st.column_config.NumberColumn("相関係数", format="%.3f")}
-                                    )
-
-                        summary_corr_text = f"""
-                        ### 🔗 相関サマリー
-                        - **閾値超えの組み合わせ数**: {len(pairs)}
-                        - **最大相関係数**: {max(pairs, key=lambda x: abs(x[2]))[2]:.3f}
-                        - **平均相関係数**: {np.mean([v for *_, v in pairs]):.3f}
-                        """
-                        st.info(summary_corr_text)
-                    else:
-                        st.info(f"相関係数が{thresh}以上の組み合わせがありません。")
+                    st.info(summary_corr_text)
+                else:
+                    st.info(f"相関係数が{thresh}以上の組み合わせがありません。")
 
             # ===== ペアプロットタブ =====
             with corr_tabs[2]:
