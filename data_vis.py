@@ -168,7 +168,7 @@ def main():
     numeric_cols, categorical_cols, datetime_cols, bool_cols = get_column_types(df)
 
     st.sidebar.header("📦 外れ値除去")
-    remove_outliers = st.sidebar.checkbox("データフレームの外れ値を除去(IQR法)", value=True)
+    remove_outliers = st.sidebar.checkbox("データフレームの外れ値を除去(IQR法)", value=False)
 
     # toastのフラグを立てる
     if "outlier_toast_shown" not in st.session_state:
@@ -629,7 +629,10 @@ def main():
                             sorted(pairs, key=lambda x: abs(x[2]), reverse=True),
                             columns=["変数1", "変数2", "相関係数"]
                         )
-                        st.dataframe(df_pairs.drop(columns=["相関係数"]), use_container_width=True)
+                        st.dataframe(df_pairs,
+                                    use_container_width=True,
+                                    column_config={"相関係数": st.column_config.NumberColumn("相関係数", format="%.3f")}
+                                    )
 
                         summary_corr_text = f"""
                         ### 🔗 相関サマリー
